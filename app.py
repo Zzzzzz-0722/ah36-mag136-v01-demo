@@ -9,6 +9,15 @@ from data import ROLES
 from models import fit_models
 from service import DEMOS, recommend, nearest_references
 
+# The public demo is uploaded as a flat repository; keep old joblib module paths readable.
+import sys
+import types
+import models as flat_models
+_welding = types.ModuleType('welding')
+_welding.__path__ = []
+sys.modules.setdefault('welding', _welding)
+sys.modules.setdefault('welding.models', flat_models)
+
 ROOT = Path(__file__).resolve().parent
 ART = ROOT
 st.set_page_config(page_title='AH36 MAG 136 | V0.1', page_icon=':material/manufacturing:', layout='wide')
