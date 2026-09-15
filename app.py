@@ -140,7 +140,7 @@ with tabs[2]:
 with tabs[3]:
     counts = v02_audit['counts']
     st.subheader('V0.2 Training Eligibility Audit')
-    st.caption('所有统计按唯一 PassID 计数；EvidenceLevel 为 metadata 建议值，人工审核字段保持空白。')
+    st.caption('所有统计按唯一 PassID 计数；SRC-005 与 SRC-007 已完成人工审核，其他记录仍使用 metadata 建议等级。')
     top = st.columns(3)
     top[0].metric('Total Cases', counts['total_cases'])
     top[1].metric('Total Passes', counts['total_passes'])
@@ -157,6 +157,13 @@ with tabs[3]:
     left.dataframe(levels, hide_index=True, width='stretch')
     right.subheader('Target Eligibility')
     right.dataframe(eligible, hide_index=True, width='stretch')
+    granularity = pd.DataFrame({
+        'DataGranularity': ['PassLevel', 'CaseLevel', 'RangeLevel', 'SimulationCondition'],
+        'Passes': [counts['data_granularity'].get(x, 0)
+                   for x in ['PassLevel', 'CaseLevel', 'RangeLevel', 'SimulationCondition']],
+    })
+    st.subheader('DataGranularity')
+    st.dataframe(granularity, hide_index=True, width='stretch')
     st.subheader('主要 ExclusionReason')
     reasons = pd.DataFrame(v02_audit['main_exclusion_reasons'].items(), columns=['ExclusionReason', 'Count'])
     st.dataframe(reasons, hide_index=True, width='stretch')
@@ -167,8 +174,10 @@ with tabs[3]:
     st.download_button('下载 Model_Training_V2', (ART / 'Model_Training_V2.csv').read_bytes(),
                        'Model_Training_V2.csv', icon=':material/download:')
     with st.expander('V0.2 资格明细'):
-        detail_columns = ['CaseID', 'PassID', 'PassRole', 'InProjectScope', 'EvidenceLevel_Suggested',
-                          'EvidenceLevel_Manual', 'Eligible_Current', 'Eligible_Voltage',
+        detail_columns = ['CaseID', 'PassID', 'PassRole', 'InProjectScope', 'EvidenceLevel',
+                          'EvidenceLevel_Suggested', 'EvidenceLevel_Manual', 'DataGranularity',
+                          'TargetProvenance', 'TrainingRole', 'FormulaDerivedTarget', 'RecommendedUse',
+                          'Eligible_Current', 'Eligible_Voltage',
                           'Eligible_TravelSpeed', 'ScopeMissingFields', 'ScopeMismatchFields']
         st.dataframe(v02_frame[detail_columns], hide_index=True, width='stretch')
 

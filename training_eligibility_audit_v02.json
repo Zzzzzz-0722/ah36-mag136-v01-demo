@@ -30,16 +30,22 @@
     "total_passes": 32,
     "in_project_scope_passes": 8,
     "evidence_levels": {
-      "A": 3,
+      "A": 4,
       "B": 5,
       "C": 2,
-      "D": 4,
+      "D": 3,
       "E": 18
+    },
+    "data_granularity": {
+      "PassLevel": 20,
+      "RangeLevel": 8,
+      "SimulationCondition": 3,
+      "CaseLevel": 1
     },
     "eligible_current": 3,
     "eligible_voltage": 8,
     "eligible_travel_speed": 5,
-    "promotion_candidates": 4
+    "promotion_candidates": 0
   },
   "context_counts": {
     "rows_after_role_expansion": 38,
@@ -48,27 +54,28 @@
     "eligible_travel_speed": 5
   },
   "main_exclusion_reasons": {
-    "EvidenceLevel E is not eligible for supervised training": 18,
-    "Missing or ambiguous PassRole": 15,
+    "Missing or ambiguous PassRole": 14,
     "Outside project scope: Position": 13,
     "Missing or invalid target": 12,
     "Missing project scope fields: GrooveAngle": 11,
     "Formula-based target excluded": 10,
-    "Source explicitly excludes training": 10,
-    "EvidenceLevel D is not eligible for supervised training": 4,
+    "DataGranularity RangeLevel is not PassLevel": 8,
+    "Source explicitly excludes training": 7,
+    "Designed constant-heat-input FE conditions; not independent recommendation ground truth.": 3,
     "Missing project scope fields: JointType,Position,GrooveAngle,RootGap": 3,
     "Missing project scope fields: Position,GrooveAngle": 3,
-    "Missing project scope fields: Process,GrooveAngle": 3,
     "Outside project scope: Process": 3,
-    "EvidenceLevel C is not eligible for supervised training": 2,
+    "TargetProvenance Range is not qualified": 3,
     "Missing project scope fields: GrooveAngle,RootGap": 2,
     "Outside project scope: JointType": 2,
-    "Missing project scope fields: Position": 1,
+    "High-quality experimental case-level data, but pass-specific role is not reported for the current pass-level model.": 1,
     "Missing project scope fields: Position,GrooveAngle,RootGap": 1
   },
   "notes": [
     "Counts under counts use unique PassID; context_counts include explicit Root/Fill/Cap expansion.",
-    "EvidenceLevel is suggested from metadata. EvidenceLevel_Manual remains blank for human review.",
+    "EvidenceLevel uses reviewed overrides for SRC-005 and SRC-007; other rows remain metadata suggestions.",
+    "SRC-005 is retained as SimulationCondition and SRC-007 S1 as CaseLevel; neither enters the pass-level GPR or Promotion Queue.",
+    "No additional SRC-007 specimens were added because no other verified specimen records exist in the source workbook.",
     "Range midpoints are never converted to supervised targets.",
     "No model was trained or overwritten by the V0.2 audit pipeline."
   ]

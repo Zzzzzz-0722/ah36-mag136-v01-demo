@@ -23,6 +23,36 @@ PROJECT_SCOPE = {
     'GrooveAngle': (40.0, 60.0),
     'RootGap': (5.0, 8.0),
 }
+DATA_GRANULARITIES = ['PassLevel', 'CaseLevel', 'RangeLevel', 'SimulationCondition']
+QUALIFIED_TARGET_PROVENANCE = {'Experimental', 'Engineering setting'}
+PROMOTION_COLUMNS = [
+    'Priority', 'CaseID', 'PassID', 'Current DataClass', 'EvidenceLevel', 'Current', 'Voltage',
+    'TravelSpeed', 'MissingFields', 'ExclusionReason', 'SourceID', 'Source', 'RecommendedAction',
+]
+CURATION_DECISIONS = {
+    'SRC-005': {
+        'ExpectedCaseID': 'AH36-10-PA-CN-001',
+        'EvidenceLevel': 'D',
+        'DataGranularity': 'SimulationCondition',
+        'TargetProvenance': 'Designed FE condition',
+        'TrainingRole': 'SimulationReference',
+        'FormulaDerivedTarget': True,
+        'ExclusionReason': ('Designed constant-heat-input FE conditions; not independent '
+                            'recommendation ground truth.'),
+        'RecommendedUse': 'Simulation reference / Heat-input consistency check / Retrieval',
+    },
+    'SRC-007': {
+        'ExpectedCaseID': 'AH36-10-S1-001',
+        'EvidenceLevel': 'A',
+        'DataGranularity': 'CaseLevel',
+        'TargetProvenance': 'Experimental',
+        'TrainingRole': 'CaseLevelReference',
+        'FormulaDerivedTarget': False,
+        'ExclusionReason': ('High-quality experimental case-level data, but pass-specific role is '
+                            'not reported for the current pass-level model.'),
+        'RecommendedUse': 'Experimental case-level reference / future case-level model / retrieval.',
+    },
+}
 
 
 def number(value):
@@ -96,6 +126,24 @@ def evidence_suggestion(row, missing_fields, incompatible_fields):
     return 'D', 'Potentially useful record with incomplete evidence or process identity'
 
 
+def data_granularity(row):
+    nature = str(row.get('Pass_参数性质') or '')
+    if '候选' in nature:
+        return 'PassLevel'
+    return 'RangeLevel' if any(x in nature for x in ['范围', '窗口']) else 'PassLevel'
+
+
+def target_provenance(row, granularity):
+    nature = str(row.get('Pass_参数性质') or '')
+    if any(x in nature for x in ['实验', '实测', 'PQR']):
+        return 'Experimental'
+    if any(x in nature for x in ['候选', 'WPS', '工程', '设定']):
+        return 'Engineering setting'
+    if granularity == 'RangeLevel':
+        return 'Range'
+    return 'Reference'
+
+
 def add_v02_eligibility(training, formulas):
     """Add V0.2 scope and target-specific eligibility without altering source columns."""
     source_groups = sorted(x for x in training.SourceGroup.dropna().unique())
@@ -103,6 +151,7 @@ def add_v02_eligibility(training, formulas):
     rows = []
     for original in training.to_dict('records'):
         row = dict(original)
+        row['V1_ExclusionReason'] = row.get('ExclusionReason') or ''
         row['Material'] = row.get('Case_材料牌号')
         row['Process'] = standardized_process(row)
         row['JointType'] = standardized_joint(row)
@@ -125,36 +174,67 @@ def add_v02_eligibility(training, formulas):
         row['InProjectScope'] = not scope_missing and not incompatible
         row['ScopeMissingFields'] = ', '.join(scope_missing)
         row['ScopeMismatchFields'] = ', '.join(incompatible)
+        row['SourceID'] = source_ids.get(row.get('SourceGroup'), '')
+        row['Source'] = row.get('Case_来源名称') or row.get('SourceGroup') or ''
         level, basis = evidence_suggestion(row, missing, incompatible)
         row['EvidenceLevel_Suggested'] = level
         row['EvidenceLevel_Basis'] = basis
         row['EvidenceLevel_Manual'] = ''
         row['EvidenceReviewStatus'] = 'Pending'
-        row['SourceID'] = source_ids.get(row.get('SourceGroup'), '')
-        row['Source'] = row.get('Case_来源名称') or row.get('SourceGroup') or ''
+        row['EvidenceLevel'] = level
+        row['DataGranularity'] = data_granularity(row)
+        row['TargetProvenance'] = target_provenance(row, row['DataGranularity'])
+        row['TrainingRole'] = ('Constraint' if row['DataGranularity'] == 'RangeLevel'
+                               else 'PassLevelCandidate')
+        row['FormulaDerivedTarget'] = False
+        row['RecommendedUse'] = ('Constraint Check / Retrieval' if row['DataGranularity'] == 'RangeLevel'
+                                 else 'Pass-level model candidate / Retrieval')
+        decision = CURATION_DECISIONS.get(row['SourceID'])
+        if decision:
+            if row['CaseID'] != decision['ExpectedCaseID']:
+                raise ValueError(f"{row['SourceID']} unexpectedly maps to {row['CaseID']}")
+            for field in ['DataGranularity', 'TargetProvenance', 'TrainingRole',
+                          'FormulaDerivedTarget', 'RecommendedUse']:
+                row[field] = decision[field]
+            row['EvidenceLevel_Manual'] = decision['EvidenceLevel']
+            row['EvidenceLevel'] = decision['EvidenceLevel']
+            row['EvidenceReviewStatus'] = 'Reviewed'
         base_reasons = []
         if not row['InProjectScope']:
             if scope_missing:
                 base_reasons.append('Missing project scope fields: ' + ','.join(scope_missing))
             if incompatible:
                 base_reasons.append('Outside project scope: ' + ','.join(incompatible))
+        if row['DataGranularity'] != 'PassLevel':
+            base_reasons.append(f"DataGranularity {row['DataGranularity']} is not PassLevel")
         if row.get('PassRole') not in ROLES:
             base_reasons.append('Missing or ambiguous PassRole')
-        if level not in ['A', 'B']:
-            base_reasons.append(f'EvidenceLevel {level} is not eligible for supervised training')
+        if row['TargetProvenance'] not in QUALIFIED_TARGET_PROVENANCE:
+            base_reasons.append(f"TargetProvenance {row['TargetProvenance']} is not qualified")
         if row.get('Case_训练准入') == '否' or row.get('Pass_训练准入') == '否':
             base_reasons.append('Source explicitly excludes training')
         for target, field in TARGETS.items():
             value = number(row.get('Pass_' + field))
             formula = ('逐道参数', row.get('Pass_ExcelRow'), field) in formulas
+            formula_derived = formula or (row['SourceID'] == 'SRC-005' and target == 'TravelSpeed')
+            row['FormulaDerivedTarget_' + target] = formula_derived
             reasons = list(base_reasons)
             if value is None or value <= 0:
                 reasons.append('Missing or invalid target')
-            if formula:
+            if formula_derived:
                 reasons.append('Formula-based target excluded')
             eligible = not reasons
             row['Eligible_' + target] = eligible
             row['EligibilityReason_' + target] = '; '.join(reasons)
+        row['FormulaDerivedTarget'] = row['FormulaDerivedTarget'] or any(
+            row['FormulaDerivedTarget_' + target] for target in TARGETS)
+        if decision:
+            row['ExclusionReason'] = decision['ExclusionReason']
+            for target in TARGETS:
+                row['Eligible_' + target] = False
+                row['EligibilityReason_' + target] = decision['ExclusionReason']
+        else:
+            row['ExclusionReason'] = '; '.join(dict.fromkeys(base_reasons))
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -162,6 +242,10 @@ def add_v02_eligibility(training, formulas):
 def build_promotion_queue(frame):
     candidates = []
     for _, row in frame.drop_duplicates('PassID').iterrows():
+        if (row.DataGranularity != 'PassLevel' or
+                row.TargetProvenance not in QUALIFIED_TARGET_PROVENANCE or
+                row.get('Case_训练准入') == '否' or row.get('Pass_训练准入') == '否'):
+            continue
         missing = [x for x in (str(row.ScopeMissingFields) + ',' +
                                ('PassRole' if row.PassRole not in ROLES else '')).split(',') if x.strip()]
         missing = [x.strip() for x in missing]
@@ -173,7 +257,7 @@ def build_promotion_queue(frame):
         action = 'Verify and populate ' + ', '.join(missing) + '; retain source values unchanged'
         candidates.append({
             'Priority': priority, 'CaseID': row.CaseID, 'PassID': row.PassID,
-            'Current DataClass': row.DataClass, 'EvidenceLevel': row.EvidenceLevel_Suggested,
+            'Current DataClass': row.DataClass, 'EvidenceLevel': row.EvidenceLevel,
             'Current': values['Current'], 'Voltage': values['Voltage'], 'TravelSpeed': values['TravelSpeed'],
             'MissingFields': ', '.join(missing),
             'ExclusionReason': '; '.join(dict.fromkeys(
@@ -182,7 +266,7 @@ def build_promotion_queue(frame):
                 for reason in str(value or '').split('; ') if reason)),
             'SourceID': row.SourceID, 'Source': row.Source, 'RecommendedAction': action,
         })
-    queue = pd.DataFrame(candidates)
+    queue = pd.DataFrame(candidates, columns=PROMOTION_COLUMNS)
     if not queue.empty:
         queue['_order'] = queue.Priority.map({'High': 0, 'Medium': 1, 'Low': 2})
         queue = queue.sort_values(['_order', 'CaseID', 'PassID']).drop(columns='_order').reset_index(drop=True)
@@ -194,10 +278,13 @@ def v02_audit(frame, queue, source_summary):
     reason_counts = {}
     for _, row in passes.iterrows():
         reasons = set()
-        for target in TARGETS:
-            if not row['Eligible_' + target]:
-                reasons.update(reason for reason in str(row['EligibilityReason_' + target]).split('; ')
-                               if reason and reason != 'nan')
+        if row.SourceID in CURATION_DECISIONS:
+            reasons.add(row.ExclusionReason)
+        else:
+            for target in TARGETS:
+                if not row['Eligible_' + target]:
+                    reasons.update(reason for reason in str(row['EligibilityReason_' + target]).split('; ')
+                                   if reason and reason != 'nan')
         for reason in reasons:
             if reason:
                 reason_counts[reason] = reason_counts.get(reason, 0) + 1
@@ -210,7 +297,8 @@ def v02_audit(frame, queue, source_summary):
             'total_cases': int(source_summary['焊接Case']['records']),
             'total_passes': int(passes.PassID.nunique()),
             'in_project_scope_passes': int(passes.InProjectScope.sum()),
-            'evidence_levels': passes.EvidenceLevel_Suggested.value_counts().sort_index().to_dict(),
+            'evidence_levels': passes.EvidenceLevel.value_counts().sort_index().to_dict(),
+            'data_granularity': passes.DataGranularity.value_counts().to_dict(),
             'eligible_current': int(passes.Eligible_Current.sum()),
             'eligible_voltage': int(passes.Eligible_Voltage.sum()),
             'eligible_travel_speed': int(passes.Eligible_TravelSpeed.sum()),
@@ -225,7 +313,9 @@ def v02_audit(frame, queue, source_summary):
         'main_exclusion_reasons': dict(sorted(reason_counts.items(), key=lambda item: (-item[1], item[0]))),
         'notes': [
             'Counts under counts use unique PassID; context_counts include explicit Root/Fill/Cap expansion.',
-            'EvidenceLevel is suggested from metadata. EvidenceLevel_Manual remains blank for human review.',
+            'EvidenceLevel uses reviewed overrides for SRC-005 and SRC-007; other rows remain metadata suggestions.',
+            'SRC-005 is retained as SimulationCondition and SRC-007 S1 as CaseLevel; neither enters the pass-level GPR or Promotion Queue.',
+            'No additional SRC-007 specimens were added because no other verified specimen records exist in the source workbook.',
             'Range midpoints are never converted to supervised targets.',
             'No model was trained or overwritten by the V0.2 audit pipeline.',
         ],
@@ -377,6 +467,9 @@ def save_v02_audit(path, destination):
     audit = v02_audit(v02, queue, summary)
     v02.to_csv(dest / 'Model_Training_V2.csv', index=False, encoding='utf-8-sig')
     queue.to_csv(dest / 'Promotion_Queue_V02.csv', index=False, encoding='utf-8-sig')
+    pd.DataFrame([
+        {'SourceID': source_id, **decision} for source_id, decision in CURATION_DECISIONS.items()
+    ]).to_csv(dest / 'V02_Curation_Decisions.csv', index=False, encoding='utf-8-sig')
     (dest / 'training_eligibility_audit_v02.json').write_text(
         json.dumps(audit, ensure_ascii=False, indent=2), encoding='utf-8')
     return tables, v02, queue, issues, audit

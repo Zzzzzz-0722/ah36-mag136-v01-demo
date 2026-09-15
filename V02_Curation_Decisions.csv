@@ -1,0 +1,3 @@
+﻿SourceID,ExpectedCaseID,EvidenceLevel,DataGranularity,TargetProvenance,TrainingRole,FormulaDerivedTarget,ExclusionReason,RecommendedUse
+SRC-005,AH36-10-PA-CN-001,D,SimulationCondition,Designed FE condition,SimulationReference,True,Designed constant-heat-input FE conditions; not independent recommendation ground truth.,Simulation reference / Heat-input consistency check / Retrieval
+SRC-007,AH36-10-S1-001,A,CaseLevel,Experimental,CaseLevelReference,False,"High-quality experimental case-level data, but pass-specific role is not reported for the current pass-level model.",Experimental case-level reference / future case-level model / retrieval.
