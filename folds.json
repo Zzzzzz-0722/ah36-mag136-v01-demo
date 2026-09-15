@@ -1,0 +1,158 @@
+[
+  {
+    "Target": "Current",
+    "Model": "Baseline",
+    "Grouping": "CaseID",
+    "Fold": 0,
+    "TrainCases": [
+      "AH36-12-1G-50-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-40-UNESA"
+    ]
+  },
+  {
+    "Target": "Current",
+    "Model": "Baseline",
+    "Grouping": "CaseID",
+    "Fold": 1,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-50-UNESA"
+    ]
+  },
+  {
+    "Target": "Current",
+    "Model": "Baseline",
+    "Grouping": "CaseID",
+    "Fold": 2,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-50-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-60-UNESA"
+    ]
+  },
+  {
+    "Target": "Current",
+    "Model": "GPR",
+    "Grouping": "CaseID",
+    "Fold": 0,
+    "TrainCases": [
+      "AH36-12-1G-50-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-40-UNESA"
+    ]
+  },
+  {
+    "Target": "Current",
+    "Model": "GPR",
+    "Grouping": "CaseID",
+    "Fold": 1,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-50-UNESA"
+    ]
+  },
+  {
+    "Target": "Current",
+    "Model": "GPR",
+    "Grouping": "CaseID",
+    "Fold": 2,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-50-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-60-UNESA"
+    ]
+  },
+  {
+    "Target": "Voltage",
+    "Model": "Baseline",
+    "Grouping": "CaseID",
+    "Fold": 0,
+    "TrainCases": [
+      "AH36-12-1G-50-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-40-UNESA"
+    ]
+  },
+  {
+    "Target": "Voltage",
+    "Model": "Baseline",
+    "Grouping": "CaseID",
+    "Fold": 1,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-50-UNESA"
+    ]
+  },
+  {
+    "Target": "Voltage",
+    "Model": "Baseline",
+    "Grouping": "CaseID",
+    "Fold": 2,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-50-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-60-UNESA"
+    ]
+  },
+  {
+    "Target": "Voltage",
+    "Model": "GPR",
+    "Grouping": "CaseID",
+    "Fold": 0,
+    "TrainCases": [
+      "AH36-12-1G-50-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-40-UNESA"
+    ]
+  },
+  {
+    "Target": "Voltage",
+    "Model": "GPR",
+    "Grouping": "CaseID",
+    "Fold": 1,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-60-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-50-UNESA"
+    ]
+  },
+  {
+    "Target": "Voltage",
+    "Model": "GPR",
+    "Grouping": "CaseID",
+    "Fold": 2,
+    "TrainCases": [
+      "AH36-12-1G-40-UNESA",
+      "AH36-12-1G-50-UNESA"
+    ],
+    "TestCases": [
+      "AH36-12-1G-60-UNESA"
+    ]
+  }
+]

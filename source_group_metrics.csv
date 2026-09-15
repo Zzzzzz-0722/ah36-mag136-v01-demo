@@ -1,0 +1,7 @@
+﻿Grouping,Target,Model,Cases,Sources,N,EligibleContexts,Coverage,MAE,RMSE,CaseMacroMAE,CaseMacroRMSE,Coverage95,Status
+SourceGroup,Current,Baseline,3,1,0,9,0.0,,,,,,Insufficient independent groups / labels
+SourceGroup,Current,GPR,3,1,0,9,0.0,,,,,,Insufficient independent groups / labels
+SourceGroup,Voltage,Baseline,3,1,0,9,0.0,,,,,,Insufficient independent groups / labels
+SourceGroup,Voltage,GPR,3,1,0,9,0.0,,,,,,Insufficient independent groups / labels
+SourceGroup,TravelSpeed,Baseline,0,0,0,0,0.0,,,,,,Insufficient independent groups / labels
+SourceGroup,TravelSpeed,GPR,0,0,0,0,0.0,,,,,,Insufficient independent groups / labels
