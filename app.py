@@ -20,7 +20,7 @@ sys.modules.setdefault('welding.models', flat_models)
 
 ROOT = Path(__file__).resolve().parent
 ART = ROOT
-st.set_page_config(page_title='AH36 MAG 136 | V0.1', page_icon=':material/manufacturing:', layout='wide')
+st.set_page_config(page_title='AH36 MAG 136 | V0.2 Data', page_icon=':material/manufacturing:', layout='wide')
 
 
 @st.cache_resource
@@ -34,9 +34,12 @@ if not (ART / 'models.joblib').exists():
     st.error('模型文件缺失。请在项目目录运行 python train.py。')
     st.stop()
 frame, constraints, research_models, audit, strict_models = load_assets()
+v02_frame = pd.read_csv(ART / 'Model_Training_V2.csv')
+v02_audit = json.loads((ART / 'training_eligibility_audit_v02.json').read_text(encoding='utf-8'))
+promotion_queue = pd.read_csv(ART / 'Promotion_Queue_V02.csv')
 st.title('AH36 MAG 136')
-st.caption('V0.1 · 单V对接 · 板厚 / 坡口总夹角 / 根部间隙 / 焊接位置 / PassRole')
-tabs = st.tabs(['工艺推荐', '模型评价', '数据审计', '组会演示'])
+st.caption('V0.2 数据架构 · AH36 / MAG 136 / Single-V Butt Joint / PA · 当前预测模型仍为 V0.1，未重新训练')
+tabs = st.tabs(['工艺推荐', '模型评价', '数据审计', 'Training Eligibility Audit', '组会演示'])
 
 with tabs[0]:
     mode = st.radio('数据资格', ['研究模式（保留待审核状态）', '仅已批准数据'], horizontal=True)
@@ -135,6 +138,41 @@ with tabs[2]:
         st.dataframe(pd.read_csv(ART / '实验结果.csv'), hide_index=True, width='stretch')
 
 with tabs[3]:
+    counts = v02_audit['counts']
+    st.subheader('V0.2 Training Eligibility Audit')
+    st.caption('所有统计按唯一 PassID 计数；EvidenceLevel 为 metadata 建议值，人工审核字段保持空白。')
+    top = st.columns(3)
+    top[0].metric('Total Cases', counts['total_cases'])
+    top[1].metric('Total Passes', counts['total_passes'])
+    top[2].metric('InProjectScope Passes', counts['in_project_scope_passes'])
+    levels = pd.DataFrame({'EvidenceLevel': list('ABCDE'),
+                           'Passes': [counts['evidence_levels'].get(x, 0) for x in 'ABCDE']})
+    eligible = pd.DataFrame({
+        'Target': ['Current', 'Voltage', 'TravelSpeed'],
+        'Eligible Passes': [counts['eligible_current'], counts['eligible_voltage'],
+                            counts['eligible_travel_speed']],
+    })
+    left, right = st.columns(2)
+    left.subheader('EvidenceLevel')
+    left.dataframe(levels, hide_index=True, width='stretch')
+    right.subheader('Target Eligibility')
+    right.dataframe(eligible, hide_index=True, width='stretch')
+    st.subheader('主要 ExclusionReason')
+    reasons = pd.DataFrame(v02_audit['main_exclusion_reasons'].items(), columns=['ExclusionReason', 'Count'])
+    st.dataframe(reasons, hide_index=True, width='stretch')
+    st.subheader(f"Promotion Queue ({counts['promotion_candidates']})")
+    st.dataframe(promotion_queue, hide_index=True, width='stretch')
+    st.download_button('下载 Promotion Queue', (ART / 'Promotion_Queue_V02.csv').read_bytes(),
+                       'Promotion_Queue_V02.csv', icon=':material/download:')
+    st.download_button('下载 Model_Training_V2', (ART / 'Model_Training_V2.csv').read_bytes(),
+                       'Model_Training_V2.csv', icon=':material/download:')
+    with st.expander('V0.2 资格明细'):
+        detail_columns = ['CaseID', 'PassID', 'PassRole', 'InProjectScope', 'EvidenceLevel_Suggested',
+                          'EvidenceLevel_Manual', 'Eligible_Current', 'Eligible_Voltage',
+                          'Eligible_TravelSpeed', 'ScopeMissingFields', 'ScopeMismatchFields']
+        st.dataframe(v02_frame[detail_columns], hide_index=True, width='stretch')
+
+with tabs[4]:
     st.subheader('固定 Demo')
     st.dataframe(pd.DataFrame(DEMOS).T, width='stretch')
     st.markdown('''1. **已有文献工况**：展示190 A、33 V，解释共同控制参数和焊速缺失。
